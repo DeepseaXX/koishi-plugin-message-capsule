@@ -34,9 +34,6 @@ export function renderHtml(
   const view = createExportView(document, settings, assetMode)
   const messages = view.messages.map(message => `
     <article class="message">
-      <div class="avatar">${message.sender.avatar
-        ? `<img src="${escapeHtml(message.sender.avatar)}" alt="头像">`
-        : escapeHtml(message.sender.displayName.slice(0, 1).toUpperCase())}</div>
       <div class="bubble-wrap">
         <header><strong>${escapeHtml(message.sender.displayName)}</strong>${message.time ? `<time>${escapeHtml(message.time)}</time>` : ''}</header>
         ${detailLine(message)}
@@ -55,15 +52,13 @@ export function renderHtml(
     :root { color-scheme: light; font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif; color: #202124; background: #eef2f7; }
     * { box-sizing: border-box; }
     body { margin: 0; padding: 28px 18px; background: #eef2f7; }
-    .archive { width: min(860px, 100%); margin: 0 auto; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 40px rgba(31, 45, 61, .12); }
+    .archive { width: min(516px, 100%); margin: 0 auto; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 40px rgba(31, 45, 61, .12); }
     .hero { padding: 28px 32px 22px; color: #fff; background: linear-gradient(135deg, #4f6bed, #7357d9); }
     .hero h1 { margin: 0 0 8px; font-size: 26px; }
     .hero p { margin: 4px 0; opacity: .9; font-size: 14px; }
     .messages { padding: 24px 28px 12px; }
     .message { display: flex; gap: 12px; margin: 0 0 20px; break-inside: avoid; }
-    .avatar { flex: 0 0 42px; width: 42px; height: 42px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; color: #fff; background: #6f7f96; font-weight: 700; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .bubble-wrap { min-width: 0; max-width: calc(100% - 54px); }
+    .bubble-wrap { min-width: 0; max-width: 100%; }
     header { display: flex; gap: 10px; align-items: baseline; margin: 0 4px 5px; }
     header strong { font-size: 14px; }
     header time, .ids { color: #8892a0; font-size: 11px; }

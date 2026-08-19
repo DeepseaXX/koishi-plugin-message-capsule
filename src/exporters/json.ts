@@ -22,7 +22,6 @@ export function renderJson(document: ExportDocument, settings: ExportSettings) {
         groupNickname: message.sender.groupNickname,
         userId: message.sender.userId,
         originalId: message.sender.originalId,
-        avatar: message.sender.avatar,
       },
       content: {
         text: message.text,

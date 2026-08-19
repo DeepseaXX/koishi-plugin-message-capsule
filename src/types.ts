@@ -25,9 +25,6 @@ export interface SenderInfo {
   groupNickname?: string
   userId?: string
   originalId?: string
-  avatarUrl?: string
-  avatarPath?: string
-  avatarAbsolutePath?: string
 }
 
 export interface ExportResource {
@@ -75,7 +72,6 @@ export interface ExportSettings {
   includeUserId: boolean
   includeGroupNickname: boolean
   includeOriginalId: boolean
-  includeAvatar: boolean
   saveImages: boolean
 }
 
@@ -83,7 +79,6 @@ export interface SavedResourceResult {
   files: string[]
   warnings: string[]
   savedImages: number
-  savedAvatars: number
 }
 
 export interface ArtifactResult extends SavedResourceResult {

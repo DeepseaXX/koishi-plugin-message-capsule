@@ -202,7 +202,6 @@ function elementNode(element: ElementLike) {
       uid: firstString(authorAttrs.uid, attrs.id),
       nickname: firstString(authorAttrs.name, attrs.nickname, attrs.username, attrs.name),
       card: firstString(attrs.nickname),
-      avatar: firstString(authorAttrs.avatar, attrs.avatar),
     },
     time: authorAttrs.time ?? attrs.time,
     message_id: attrs.id,
@@ -255,7 +254,6 @@ function senderInfo(sender: UnknownRecord, body: UnknownRecord): SenderInfo {
     groupNickname: firstString(sender.card, body.card),
     userId,
     originalId: firstString(sender.uid, sender.tiny_id, sender.openid, sender.id, body.uid),
-    avatarUrl: firstString(sender.avatar, sender.avatar_url, body.avatar, body.avatar_url),
   }
 }
 

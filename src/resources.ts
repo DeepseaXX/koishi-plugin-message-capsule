@@ -126,10 +126,6 @@ function attachResource(
   resource.size = downloaded.size
 }
 
-function fallbackAvatarUrl(userId?: string) {
-  return userId ? `https://q.qlogo.cn/headimg_dl?dst_uin=${encodeURIComponent(userId)}&spec=640` : undefined
-}
-
 export async function saveResources(
   ctx: Context,
   document: ExportDocument,
@@ -137,8 +133,8 @@ export async function saveResources(
   settings: ExportSettings,
   config: Config,
 ): Promise<SavedResourceResult> {
-  const result: SavedResourceResult = { files: [], warnings: [], savedImages: 0, savedAvatars: 0 }
-  if (!settings.saveImages && !settings.includeAvatar) return result
+  const result: SavedResourceResult = { files: [], warnings: [], savedImages: 0 }
+  if (!settings.saveImages) return result
 
   const assetsDir = path.join(workspace, 'assets')
   await mkdir(assetsDir, { recursive: true })
@@ -179,32 +175,6 @@ export async function saveResources(
         } catch (error) {
           result.warnings.push(`第 ${message.index} 条消息的图片保存失败：${error instanceof Error ? error.message : String(error)}`)
         }
-      }
-    }
-  }
-
-  if (settings.includeAvatar) {
-    let avatarIndex = 0
-    const senderCache = new Map<string, DownloadedFile>()
-    for (const message of document.messages) {
-      const source = message.sender.avatarUrl ?? fallbackAvatarUrl(message.sender.userId)
-      if (!source) {
-        result.warnings.push(`第 ${message.index} 条消息的发送者没有可用头像地址。`)
-        continue
-      }
-      const senderKey = message.sender.originalId ?? message.sender.userId ?? source
-      try {
-        let downloaded = senderCache.get(senderKey)
-        if (!downloaded) {
-          avatarIndex++
-          downloaded = await obtain(source, `avatar-${String(avatarIndex).padStart(4, '0')}`)
-          senderCache.set(senderKey, downloaded)
-          result.savedAvatars++
-        }
-        message.sender.avatarAbsolutePath = downloaded.absolutePath
-        message.sender.avatarPath = path.relative(workspace, downloaded.absolutePath).replace(/\\/g, '/')
-      } catch (error) {
-        result.warnings.push(`第 ${message.index} 条消息的头像保存失败：${error instanceof Error ? error.message : String(error)}`)
       }
     }
   }

@@ -9,7 +9,6 @@ export interface ViewSender {
   groupNickname?: string
   userId?: string
   originalId?: string
-  avatar?: string
 }
 
 export interface ViewPart {
@@ -89,7 +88,6 @@ function renderMessageTemplate(
     '${日期时间}': message.time || '',
     '${消息内容}': message.text,
     '${图片}': imagePaths,
-    '${头像}': message.sender.avatar || '',
     '${序号}': String(message.index),
     '${平台}': document.source.platform,
   }
@@ -128,11 +126,6 @@ export function createExportView(
       const preferredName = settings.includeGroupNickname
         ? message.sender.groupNickname ?? username
         : username
-      const avatar = settings.includeAvatar
-        ? assetMode === 'file-url' && message.sender.avatarAbsolutePath
-          ? pathToFileURL(message.sender.avatarAbsolutePath).href
-          : message.sender.avatarPath?.replace(/\\/g, '/')
-        : undefined
 
       const viewMessage: ViewMessage = {
         index: message.index,
@@ -146,7 +139,6 @@ export function createExportView(
           groupNickname: settings.includeGroupNickname ? message.sender.groupNickname : undefined,
           userId: settings.includeUserId ? message.sender.userId : undefined,
           originalId: settings.includeOriginalId ? message.sender.originalId : undefined,
-          avatar,
         },
         parts: message.parts.map(part => ({
           type: part.type,

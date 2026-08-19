@@ -19,8 +19,6 @@ const document: ExportDocument = {
       groupNickname: '群名片',
       userId: '123456',
       originalId: 'uid-secret',
-      avatarPath: 'assets/avatar.png',
-      avatarAbsolutePath: 'D:/tmp/avatar.png',
     },
     parts: [{ type: 'text', text: '<script>alert(1)</script>' }],
     text: '<script>alert(1)</script>',
@@ -34,7 +32,6 @@ const privateSettings: ExportSettings = {
   includeUserId: false,
   includeGroupNickname: false,
   includeOriginalId: false,
-  includeAvatar: false,
   saveImages: false,
 }
 
@@ -88,4 +85,9 @@ test('HTML escapes message content and never emits remote source URLs', () => {
   assert.doesNotMatch(output, /<script>alert/)
   assert.match(output, /&lt;script&gt;alert/)
   assert.doesNotMatch(output, /forward-secret|123456/)
+})
+
+test('PNG page is kept at the compact width', () => {
+  const output = renderHtml(document, privateSettings)
+  assert.match(output, /\.archive \{ width: min\(516px, 100%\);/)
 })

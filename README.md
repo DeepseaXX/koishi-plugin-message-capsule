@@ -2,7 +2,7 @@
 
 “消息胶囊”把你回复的消息或合并记录，整理成容易阅读、保存和分享的内容。它现在从“合并聊天记录”开始，但设计上不绑定 QQ，后续可以继续接入更多消息来源和触发方式。
 
-插件首次加载时默认拒绝所有人使用。管理员需要先在设置页授权，再按需要打开本地保存、群文件、文字重发和图片保存权限。
+插件首次加载时默认拒绝所有人使用。管理员需要先在设置页授权，再按需要打开本地保存、群文件、发送到当前会话和图片保存权限。
 
 ## 快速开始
 
@@ -14,7 +14,7 @@
 msgcap
 ```
 
-默认行为是把记录整理成纯文字，并尽量合并为一条消息转发；超出设置的字数上限后才会自动分条。
+默认行为是把记录整理成纯文字，并把全部内容放在同一条普通文字消息里发送。
 
 ## 指令
 
@@ -24,52 +24,74 @@ msgcap
 msgcap [format] [target]
 ```
 
-示例：
+`format`：输出格式。
 
-```text
-msgcap                             # 默认纯文字合并转发
-msgcap txt local                   # TXT 文件，保存到本地
-msgcap json group                  # JSON 文件，上传到群文件
-msgcap md group                    # Markdown，上传到群文件
-msgcap image local                 # PNG 长图，保存到本地
-msgcap chat                        # 纯文字合并转发
-```
-
-其中 `format` 可选 `txt`、`json`、`md`、`image`、`default`，`target` 可选 `local`、`group`、`chat`、`default`。`default` 表示使用设置中的默认值。
-
-例如：
-
-```text
-msgcap default group              # 使用默认格式，上传到群文件
-msgcap group                      # 同上：省略 format 时使用默认格式
-msgcap image group                # PNG 长图，上传到群文件
-```
-
-如果默认目标是 `chat`，`msgcap image` 和 `msgcap image default` 会明确提示你改用 `local` 或 `group`，不会偷偷把 PNG 改成 TXT。
-
-可用格式：
-
-| 格式 | 说明 |
+| 选项 | 说明 |
 | --- | --- |
-| `txt` | 适合直接查看和长期保存的纯文本 |
-| `json` | 保留消息、发送者、元素和定型文结果的结构化数据 |
-| `md` | Markdown 文档，扩展名为 `.md` |
-| `image` | 生成 PNG 长图，需要 `puppeteer` |
+| `default` | 使用设置中的默认格式 |
+| `txt` | 纯文本文件（`.txt`） |
+| `json` | JSON 结构化数据（`.json`） |
+| `md` | Markdown 文档（`.md`） |
+| `image` | PNG 长图，需要 `puppeteer` |
 
-旧版本的中文参数和 `html` 参数仍作为兼容别名，但不会在新帮助中展示；`html` 会导出 Markdown，不再生成 HTML 文件。PNG 内部仍会使用 HTML 作为渲染中间层。
+`target`：输出位置或发送方式。
 
-如果上传群文件时同时保存了图片或头像，插件会把主文件和 `assets/` 一起打包成 ZIP；没有附加资源时直接上传主文件。
+| 选项 | 说明 |
+| --- | --- |
+| `default` | 使用设置中的默认目标 |
+| `local` | 保存到本地，需要保存目录和本地保存权限 |
+| `group` | 上传到当前群文件，只能在群聊中使用 |
+| `chat` | 将 txt / md / json 作为文字发送，将 image 作为图片发送 |
+
+纯文字快捷指令：
+
+| 指令 | 作用 |
+| --- | --- |
+| `singlechat` | 全部内容合并成一条普通文字消息发送 |
+| `batchchat` | 按设置的每组消息数和字数限制，分成多条普通文字消息发送 |
+
+常用组合：
+
+| 指令 | 作用 |
+| --- | --- |
+| `msgcap` | 使用默认格式和默认目标 |
+| `msgcap default group` | 使用默认格式，上传到群文件 |
+| `msgcap group` | 同上；单独的 `group` 会被识别为目标 |
+| `msgcap txt local` | 导出 TXT，保存到本地 |
+| `msgcap json group` | 导出 JSON，上传到群文件 |
+| `msgcap md group` | 导出 Markdown，上传到群文件 |
+| `msgcap md chat` | 将 Markdown 作为纯文本发送到当前会话 |
+| `msgcap json chat` | 将 JSON 作为纯文本发送到当前会话 |
+| `msgcap image chat` | 将 PNG 长图作为图片发送到当前会话 |
+| `msgcap image local` | 导出 PNG 长图，保存到本地 |
+| `msgcap image group` | 导出 PNG 长图，上传到群文件 |
+| `msgcap singlechat` | 全部内容放在同一条普通文字消息里发送 |
+| `msgcap batchchat` | 将内容分批后分别发送为普通文字消息 |
+| `msgcap chat` | 兼容写法，按设置中的发送方式处理 |
+
+注意：
+
+- 省略 `target` 时使用设置中的默认目标，例如 `msgcap txt`。
+- `txt`、`md` 和 `json` 会作为文字发送，`image` 会作为图片发送；四种格式都可以使用 `chat`。
+- 例如 `msgcap json chat`、`msgcap md chat` 和 `msgcap image chat` 都可以正常发送。
+- 兼容旧参数：`text`、`markdown`、`html`、`web`、`img`、`png`、`resend` 以及旧中文参数仍可使用，但推荐使用上表中的英文写法。
+
+`html` 是旧兼容别名，会导出 Markdown，不再生成 HTML 文件；PNG 内部仍会使用 HTML 作为渲染中间层。
+
+如果上传群文件时同时保存了消息图片，插件会把主文件和 `assets/` 一起打包成 ZIP；没有附加资源时直接上传主文件。插件不再获取或保存发送者头像。
 
 ## 发送方式
 
-目标为 `chat` 时，可以用：
+纯文字发送推荐使用：
 
 ```text
-msgcap chat --single            # 尽量合并为一条，超出字数上限再分条
-msgcap chat --batch             # 按“每组消息数”分批发送
+msgcap singlechat               # 全部内容放在一条普通文字消息里
+msgcap batchchat                # 按设置分成多条普通文字消息
+msgcap txt singlechat           # 指定 TXT 作为文字内容来源
+msgcap txt batchchat
 ```
 
-设置页中的“发送方式”决定默认行为，单次指令选项优先于设置。`--single` 和 `--batch` 不能同时使用。
+设置页中的“发送方式”决定 `msgcap` 和 `msgcap chat` 的默认行为。旧的 `chat --single` 和 `chat --batch` 仍可使用，但推荐改用 `singlechat` 和 `batchchat`。
 
 ## 定型文
 
@@ -93,7 +115,6 @@ ${消息内容}
 | `${日期时间}` | 消息日期和时间 |
 | `${消息内容}` | 文本、占位符及已保存的图片路径 |
 | `${图片}` | 已保存图片的路径 |
-| `${头像}` | 已保存头像的路径 |
 | `${序号}` | 消息在本次记录中的序号 |
 | `${平台}` | 来源适配器平台名 |
 
@@ -112,10 +133,10 @@ ${消息内容}
 ## 设置重点
 
 - “默认格式”默认是 TXT。
-- “发送方式”默认是纯文字合并为一条消息，超出字数上限才分条。
+- “发送方式”默认是 single：把全部内容放在一条普通文字消息里发送。
 - 单次最多处理 200 条消息，不能在设置中调到更高。
 - “长期保存目录”默认为空。留空时不会创建目录，也不会执行本地保存操作；需要本地保存时请填写绝对路径或相对 Koishi 工作目录的路径。
-- 图片默认不下载。下载图片、头像或生成 PNG 还需要“允许保存图片”权限。
+- 图片默认不下载。下载消息图片或生成 PNG 还需要“允许保存图片”权限；插件不会获取发送者头像。
 
 本地保存示例：
 
@@ -123,7 +144,7 @@ ${消息内容}
 data/message-capsule/
 └── 消息胶囊-首条消息-首条时间-10条/
     ├── 消息胶囊-首条消息-首条时间-10条.txt
-    └── assets/                 # 开启图片或头像后才会出现
+    └── assets/                 # 开启消息图片后才会出现
 ```
 
 ## 适配器兼容性
