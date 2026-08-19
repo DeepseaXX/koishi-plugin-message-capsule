@@ -1,0 +1,26 @@
+export default {
+  'message-capsule': {
+    messages: {
+      'invalid-format': '不认识格式“{0}”。可用格式：txt、json、html、image（图片）。',
+      'invalid-target': '不认识目标“{0}”。可用目标：local（本地）、group（群文件）、chat（重发）。',
+      'option-conflict': '选项冲突：不能同时开启和关闭“{0}”。',
+      'need-quote': '请先回复一条可读取的消息或合并记录，再输入本指令。',
+      'not-forward': '这条回复没有识别到可处理的合并记录。需要标准 forward 元素或已展开的消息节点。',
+      'unsupported-adapter': '当前适配器提供了记录引用，但没有 getForwardMsg。请让适配器提供标准展开节点，或使用支持该接口的 OneBot 适配器。',
+      'empty-forward': '这条记录中没有可处理的消息。',
+      'message-limit': '记录条数超过当前安全上限（{0} 条）。请由管理员在设置中调整“单次最多处理的消息数”。',
+      'deny-local': '你可以调用指令，但没有“保存到本地”权限。',
+      'deny-group': '你可以调用指令，但没有“上传到群文件”权限。',
+      'deny-chat': '你可以调用指令，但没有“文字重发”权限。',
+      'deny-images': '本次操作会保存图片、头像或生成 PNG，但你没有“保存图片”权限。',
+      'group-only': '“群文件”只能在群聊中使用。',
+      'chat-media': '“重发”只发送文字，不支持单次开启 --images 或 --avatar。',
+      'screenshot-unavailable': '生成 PNG 需要先加载 puppeteer 插件；TXT、JSON 和 HTML 不受影响。',
+      'local-success': '已导出 {0} 条消息并保存到：{1}{2}',
+      'group-success': '已导出 {0} 条消息并上传到当前群文件{1}。',
+      'chat-success': '已将 {0} 条消息按纯文字合并转发重新发送。',
+      'warning-count': '（另有 {0} 个图片或头像未保存，详情见日志）',
+      'generic-error': '导出失败：{0}',
+    },
+  },
+}

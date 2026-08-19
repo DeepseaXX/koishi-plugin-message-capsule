@@ -1,0 +1,58 @@
+{
+  "name": "@deepseaxx/koishi-plugin-message-capsule",
+  "version": "0.1.0",
+  "description": "Package a replied message or merged record into TXT, JSON, HTML, PNG, group files, or a text-only forward.",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && esbuild src/index.ts --bundle --platform=node --target=node18 --format=cjs --external:koishi --outfile=lib/index.js",
+    "build:types": "tsc -p tsconfig.json",
+    "build:js": "esbuild src/index.ts --bundle --platform=node --target=node18 --format=cjs --external:koishi --outfile=lib/index.js",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "test": "tsx --test tests/*.test.ts",
+    "prepublishOnly": "tsc -p tsconfig.check.json && tsx --test tests/*.test.ts && tsc -p tsconfig.json && esbuild src/index.ts --bundle --platform=node --target=node18 --format=cjs --external:koishi --outfile=lib/index.js"
+  },
+  "keywords": [
+    "koishi",
+    "koishi-plugin",
+    "onebot",
+    "message-capsule",
+    "merged-message",
+    "chat-export",
+    "backup"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DeepseaXX/koishi-plugin-message-capsule.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DeepseaXX/koishi-plugin-message-capsule/issues"
+  },
+  "homepage": "https://github.com/DeepseaXX/koishi-plugin-message-capsule#readme",
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "peerDependencies": {
+    "koishi": "^4.18.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.7",
+    "esbuild": "^0.23.1",
+    "koishi": "^4.18.11",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "koishi": {
+    "description": {
+      "en": "Package replied messages or merged records. Full merged-record reading currently requires a OneBot adapter with getForwardMsg; other adapters work when they provide standard expanded forward elements.",
+      "zh": "把被回复的消息或合并记录封装为文件或文字转发。完整读取合并记录目前需要提供 getForwardMsg 的 OneBot 适配器；其他适配器需提供标准展开节点。"
+    }
+  },
+  "sideEffects": false
+}
