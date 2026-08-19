@@ -1,7 +1,7 @@
 {
   "name": "@deepseaxx/koishi-plugin-message-capsule",
-  "version": "0.1.0",
-  "description": "Package a replied message or merged record into TXT, JSON, HTML, PNG, group files, or a text-only forward.",
+  "version": "0.1.2",
+  "description": "Turn a replied message or merged record into TXT, JSON, Markdown, PNG, group files, or a text-only forward with customizable templates.",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -50,8 +50,8 @@
   },
   "koishi": {
     "description": {
-      "en": "Package replied messages or merged records. Full merged-record reading currently requires a OneBot adapter with getForwardMsg; other adapters work when they provide standard expanded forward elements.",
-      "zh": "把被回复的消息或合并记录封装为文件或文字转发。完整读取合并记录目前需要提供 getForwardMsg 的 OneBot 适配器；其他适配器需提供标准展开节点。"
+      "en": "Turn replied messages or merged records into TXT, JSON, Markdown, PNG, files, or text-only forwards with customizable templates. OneBot getForwardMsg is fully supported; other adapters can work when they expose standard expanded forward elements.",
+      "zh": "把被回复的消息或合并记录整理为 TXT、JSON、Markdown、PNG、文件或纯文字转发，并支持定型文、文件名和发送方式设置；提供 getForwardMsg 或标准展开节点的适配器均可按能力使用。"
     }
   },
   "sideEffects": false

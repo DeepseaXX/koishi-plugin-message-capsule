@@ -18,12 +18,14 @@ export const usage = `
 ## 使用方法
 
 1. 回复一条“合并聊天记录”或其他可处理消息。
-2. 输入 \`msgcap txt\`、\`msgcap json\`、\`msgcap html\` 或 \`msgcap 图片\`。
-3. 也可以使用 \`msgcap 群文件 html\` 上传群文件，或使用 \`msgcap 重发\` 发送纯文字合并转发。
+2. 输入 \`msgcap\`，默认以纯文字合并转发。
+3. 需要文件时统一使用 \`msgcap [format] [target]\`，例如 \`msgcap txt local\`、\`msgcap json group\`、\`msgcap md group\` 或 \`msgcap image local\`。其中 \`default\` 表示使用设置中的默认值。
 
 常用单次选项：\`--images / --no-images\`、\`--time / --no-time\`、\`--user-id / --no-user-id\`、\`--nickname / --no-nickname\`、\`--id / --no-id\`、\`--avatar / --no-avatar\`。
 
-PNG 长图需要同时加载 \`puppeteer\` 插件。当前合并记录读取面向提供 \`getForwardMsg\` 的 Koishi OneBot 适配器；后续可扩展更多消息来源与触发方式。
+纯文字发送可用 \`msgcap chat --single\`（尽量一条，超限分条）或 \`msgcap chat --batch\`（按固定消息数分条）。消息定型文默认是 \'\${用户昵称} \${日期时间}\\n\${消息内容}\'；内容开关优先于定型文。
+
+PNG 长图需要同时加载 \`puppeteer\` 插件。长期保存需要填写保存目录；留空时不会创建目录，也不会执行本地保存操作。当前合并记录读取面向提供 \`getForwardMsg\` 的 Koishi OneBot 适配器；其他适配器在提供标准展开节点时也可以工作。
 
 ## 适配器兼容性
 

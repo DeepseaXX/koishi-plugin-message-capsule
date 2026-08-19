@@ -3,14 +3,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Context, h, Logger, Session } from 'koishi'
-import { createArtifact } from './artifacts'
+import { createArtifact, renderArtifactBaseName } from './artifacts'
 import { Config } from './config'
 import { createExportView } from './exporters/view'
 import { ScreenshotServiceError } from './exporters/image'
 import { getOneBotInternal } from './onebot'
 import { ForwardParseError, ForwardParser } from './parser'
 import { resolvePermissions } from './permissions'
-import { ExportDocument, ExportFormat, ExportSettings, ExportTarget } from './types'
+import { ChatSendMode, ExportDocument, ExportFormat, ExportSettings, ExportTarget } from './types'
 import { createStoredZip } from './zip'
 
 interface CommandOptions {
@@ -29,10 +29,12 @@ interface CommandOptions {
   noId?: boolean
   avatar?: boolean
   noAvatar?: boolean
+  single?: boolean
+  batch?: boolean
 }
 
 class UserInputError extends Error {
-  constructor(public key: 'invalid-format' | 'invalid-target' | 'option-conflict', public params: string[]) {
+  constructor(public key: 'invalid-format' | 'invalid-target' | 'format-target-conflict' | 'option-conflict', public params: string[]) {
     super(key)
   }
 }
@@ -40,7 +42,8 @@ class UserInputError extends Error {
 const formatAliases: Record<string, ExportFormat> = {
   txt: 'txt', text: 'txt', 文本: 'txt',
   json: 'json', 数据: 'json',
-  html: 'html', web: 'html', 网页: 'html',
+  md: 'markdown', markdown: 'markdown', 马克down: 'markdown',
+  html: 'markdown', web: 'markdown', 网页: 'markdown',
   image: 'image', img: 'image', png: 'image', 图片: 'image', 长图: 'image',
 }
 
@@ -62,14 +65,14 @@ function booleanSetting(base: boolean, enable: boolean | undefined, disable: boo
 }
 
 function resolveFormat(value: string | undefined, fallback: ExportFormat) {
-  if (!value) return fallback
+  if (!value || value.toLowerCase() === 'default') return fallback
   const format = formatAliases[value.toLowerCase()]
   if (!format) throw new UserInputError('invalid-format', [value])
   return format
 }
 
 function resolveTarget(value: string | undefined, fallback: ExportTarget) {
-  if (!value) return fallback
+  if (!value || value.toLowerCase() === 'default') return fallback
   const target = targetAliases[value.toLowerCase()]
   if (!target) throw new UserInputError('invalid-target', [value])
   return target
@@ -88,7 +91,15 @@ function resolveSettings(config: Config, options: CommandOptions): ExportSetting
     includeGroupNickname: booleanSetting(config.includeGroupNickname, options.nickname, options.noNickname, '群昵称'),
     includeOriginalId: booleanSetting(config.includeOriginalId, options.id, options.noId, '原始 ID'),
     includeAvatar: booleanSetting(config.includeAvatar, options.avatar, options.noAvatar, '头像'),
+    messageTemplate: config.messageTemplate,
   }
+}
+
+function resolveChatSendMode(config: Config, options: CommandOptions): ChatSendMode {
+  if (options.single && options.batch) throw new UserInputError('option-conflict', ['single / batch'])
+  if (options.single) return 'single'
+  if (options.batch) return 'batch'
+  return config.chatSendMode
 }
 
 function timestampName() {
@@ -115,10 +126,6 @@ async function createLocalWorkspace(ctx: Context, config: Config) {
   throw new Error('无法创建不重复的导出目录')
 }
 
-function messageBody(message: ReturnType<typeof createExportView>['messages'][number]) {
-  return message.parts.map(part => part.text).join('').trim() || '[空消息]'
-}
-
 function forwardAuthorName(message: ReturnType<typeof createExportView>['messages'][number]) {
   const details: string[] = []
   if (message.sender.userId) details.push(`用户ID:${message.sender.userId}`)
@@ -127,12 +134,50 @@ function forwardAuthorName(message: ReturnType<typeof createExportView>['message
   return details.length ? `${message.sender.displayName} (${details.join(' ')})` : message.sender.displayName
 }
 
-async function resendAsText(session: Session, document: ExportDocument, settings: ExportSettings, batchSize: number) {
+function splitForwardMessages(
+  messages: ReturnType<typeof createExportView>['messages'],
+  mode: ChatSendMode,
+  batchSize: number,
+  maxLength: number,
+) {
+  if (mode === 'batch') {
+    const batches: Array<typeof messages> = []
+    for (let offset = 0; offset < messages.length; offset += batchSize) {
+      batches.push(messages.slice(offset, offset + batchSize))
+    }
+    return batches
+  }
+
+  const batches: Array<typeof messages> = []
+  let current: typeof messages = []
+  let length = 0
+  for (const message of messages) {
+    const extra = current.length ? 1 : 0
+    if (current.length && length + extra + message.formatted.length > maxLength) {
+      batches.push(current)
+      current = []
+      length = 0
+    }
+    current.push(message)
+    length += (current.length > 1 ? 1 : 0) + message.formatted.length
+  }
+  if (current.length) batches.push(current)
+  return batches
+}
+
+async function resendAsText(
+  session: Session,
+  document: ExportDocument,
+  settings: ExportSettings,
+  mode: ChatSendMode,
+  batchSize: number,
+  maxLength: number,
+) {
   const view = createExportView(document, settings)
-  for (let offset = 0; offset < view.messages.length; offset += batchSize) {
-    const nodes = view.messages.slice(offset, offset + batchSize).map((message) => {
+  for (const batch of splitForwardMessages(view.messages, mode, batchSize, maxLength)) {
+    const nodes = batch.map((message) => {
       const name = forwardAuthorName(message)
-      const content = message.time ? `[${message.time}]\n${messageBody(message)}` : messageBody(message)
+      const content = message.formatted
       const id = settings.includeUserId ? message.sender.userId : undefined
       return h('message', {
         userId: id,
@@ -150,7 +195,7 @@ async function resendAsText(session: Session, document: ExportDocument, settings
 
 function addOptions(command: any) {
   return command
-    .option('target', '-t, --target <target:string> 目标：local / group / chat')
+    .option('target', '-t, --target <target:string> 兼容写法：目标 local / group / chat')
     .option('images', '-i, --images              本次保存消息图片')
     .option('noImages', '--no-images             本次不保存消息图片')
     .option('time', '--time                      本次保存消息日期与时间')
@@ -165,11 +210,8 @@ function addOptions(command: any) {
     .option('noId', '--no-id                     本次不保存原始 ID')
     .option('avatar', '--avatar                      本次保存头像')
     .option('noAvatar', '--no-avatar                   本次不保存头像')
-}
-
-interface RunOverrides {
-  format?: ExportFormat
-  target?: ExportTarget
+    .option('single', '--single                     合并转发尽量合并为单条，超限时分条')
+    .option('batch', '--batch                      按固定消息数分条合并转发')
 }
 
 export function registerCommands(ctx: Context, config: Config, logger: Logger) {
@@ -177,24 +219,35 @@ export function registerCommands(ctx: Context, config: Config, logger: Logger) {
     session: Session,
     options: CommandOptions,
     requestedFormat: string | undefined,
-    overrides: RunOverrides = {},
+    requestedTarget?: string,
   ) => {
     const permissions = resolvePermissions(config, session.userId, session.guildId)
     if (!permissions.canUse) return config.permissionNotice
 
     try {
-      let target = overrides.target ?? resolveTarget(options.target, config.defaultTarget)
+      let target = resolveTarget(options.target, config.defaultTarget)
       let formatInput = requestedFormat
-      if (!overrides.format && formatInput && targetAliases[formatInput.toLowerCase()]) {
+      if (formatInput && targetAliases[formatInput.toLowerCase()]) {
         target = targetAliases[formatInput.toLowerCase()]
-        formatInput = undefined
+        formatInput = requestedTarget
+      } else if (requestedTarget) {
+        const positionalTarget = resolveTarget(requestedTarget, target)
+        if (options.target && positionalTarget !== target) {
+          throw new UserInputError('option-conflict', ['目标'])
+        }
+        target = positionalTarget
       }
-      const format = target === 'chat'
-        ? 'txt'
-        : overrides.format ?? resolveFormat(formatInput, config.defaultFormat)
+      const resolvedFormat = resolveFormat(formatInput, config.defaultFormat)
+      const explicitFormat = !!formatInput && formatInput.toLowerCase() !== 'default'
+      if (target === 'chat' && explicitFormat && resolvedFormat !== 'txt') {
+        throw new UserInputError('format-target-conflict', [resolvedFormat, target])
+      }
+      const format = target === 'chat' ? 'txt' : resolvedFormat
       const settings = resolveSettings(config, options)
+      const sendMode = resolveChatSendMode(config, options)
 
       if (target === 'local' && !permissions.canSaveLocal) return t(session, 'deny-local')
+      if (target === 'local' && !config.outputPath.trim()) return t(session, 'local-path-missing')
       if (target === 'group' && !permissions.canUploadGroupFile) return t(session, 'deny-group')
       if (target === 'chat' && !permissions.canResendText) return t(session, 'deny-chat')
       if (target === 'group' && !session.guildId) return t(session, 'group-only')
@@ -209,8 +262,9 @@ export function registerCommands(ctx: Context, config: Config, logger: Logger) {
       }
       if (!session.quote) return t(session, 'need-quote')
 
+      const maxMessages = Math.min(config.maxMessages, 200)
       const parser = new ForwardParser(getOneBotInternal(session), {
-        maxMessages: config.maxMessages,
+        maxMessages,
         maxDepth: config.maxForwardDepth,
       })
       const parsed = await parser.parseQuote(session.quote)
@@ -226,7 +280,7 @@ export function registerCommands(ctx: Context, config: Config, logger: Logger) {
       }
 
       if (target === 'chat') {
-        await resendAsText(session, document, settings, config.resendBatchSize)
+        await resendAsText(session, document, settings, sendMode, Math.min(config.resendBatchSize, 200), config.resendMaxLength)
         return t(session, 'chat-success', [document.messages.length])
       }
 
@@ -254,7 +308,7 @@ export function registerCommands(ctx: Context, config: Config, logger: Logger) {
 
         let uploadFile = artifact.mainFile
         if (artifact.allFiles.length > 1) {
-          uploadFile = path.join(workspace, `消息胶囊-${timestampName()}.zip`)
+          uploadFile = path.join(workspace, `${renderArtifactBaseName(document, config, format)}.zip`)
           await createStoredZip(artifact.allFiles.map(file => ({
             source: file,
             name: path.relative(workspace, file).replace(/\\/g, '/'),
@@ -275,34 +329,21 @@ export function registerCommands(ctx: Context, config: Config, logger: Logger) {
         if (error.code === 'not-forward') return t(session, 'not-forward')
         if (error.code === 'unsupported') return t(session, 'unsupported-adapter')
         if (error.code === 'empty') return t(session, 'empty-forward')
-        if (error.code === 'limit') return t(session, 'message-limit', [config.maxMessages])
+        if (error.code === 'limit') return t(session, 'message-limit', [Math.min(config.maxMessages, 200)])
       }
       logger.warn('failed to export replied forward message: %s', error instanceof Error ? error.stack ?? error.message : String(error))
       return t(session, 'generic-error', [error instanceof Error ? error.message : String(error)])
     }
   }
 
-  const root = addOptions(ctx.command(`${config.commandName} [format:string]`, '处理被回复的消息或合并记录', { authority: 0 }))
-    .usage('回复一条消息或合并记录后使用。格式可选 txt、json、html、image；用 --target 选择本地、群文件或文字重发。')
-    .example(`${config.commandName} txt`)
-    .example(`${config.commandName} html --target group --images`)
-    .example(`${config.commandName} image --no-user-id --nickname`)
-    .action(({ session, options }: { session: Session, options: CommandOptions }, format?: string) => run(session, options, format))
-
-  const formatChildren: Array<[string, ExportFormat, string]> = [
-    ['txt', 'txt', '导出为 TXT 纯文本'],
-    ['json', 'json', '导出为 JSON 结构化数据'],
-    ['html', 'html', '导出为 HTML 网页'],
-    ['图片', 'image', '把 HTML 渲染为 PNG 长图'],
-  ]
-  for (const [name, format, description] of formatChildren) {
-    addOptions(root.subcommand(name, description))
-      .action(({ session, options }: { session: Session, options: CommandOptions }) => run(session, options, undefined, { format }))
-  }
-
-  addOptions(root.subcommand('群文件 [format:string]', '把处理结果上传到当前群文件'))
-    .action(({ session, options }: { session: Session, options: CommandOptions }, format?: string) => run(session, options, format, { target: 'group' }))
-
-  addOptions(root.subcommand('重发', '把记录以纯文字合并转发重新发送'))
-    .action(({ session, options }: { session: Session, options: CommandOptions }) => run(session, options, 'txt', { target: 'chat', format: 'txt' }))
+  addOptions(ctx.command(`${config.commandName} [format:string] [target:string]`, '处理被回复的消息或合并记录', { authority: 0 }))
+    .usage('统一写法：msgcap [format] [target]. Formats: txt / json / md / image / default. Targets: local / group / chat / default.')
+    .example(`${config.commandName}`)
+    .example(`${config.commandName} txt local`)
+    .example(`${config.commandName} json group`)
+    .example(`${config.commandName} md group --images`)
+    .example(`${config.commandName} image local`)
+    .example(`${config.commandName} chat --single`)
+    .example(`${config.commandName} default group`)
+    .action(({ session, options }: { session: Session, options: CommandOptions }, format?: string, target?: string) => run(session, options, format, target))
 }

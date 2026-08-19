@@ -85,10 +85,6 @@ export function renderHtml(
       <p>导出于 ${escapeHtml(view.exportedAt)} · ${escapeHtml(view.source.platform)}</p>
     </section>
     <section class="messages">${messages}</section>
-    <footer>
-      由 koishi-plugin-message-capsule 生成。<br>
-      导出格式设计参考并感谢 <a href="https://github.com/shuakami/qq-chat-exporter">qq-chat-exporter</a> 原作者。
-    </footer>
   </main>
 </body>
 </html>`

@@ -1,10 +1,14 @@
 import { Schema } from 'koishi'
-import { ExportFormat, ExportTarget, GroupPermissionRule, UserPermissionRule } from './types'
+import { ChatSendMode, ExportFormat, ExportTarget, GroupPermissionRule, UserPermissionRule } from './types'
 
 export interface Config {
   commandName: string
   defaultFormat: ExportFormat
   defaultTarget: ExportTarget
+  chatSendMode: ChatSendMode
+  resendMaxLength: number
+  messageTemplate: string
+  fileNameTemplate: string
   outputPath: string
   userPermissions: UserPermissionRule[]
   groupPermissions: GroupPermissionRule[]
@@ -29,10 +33,10 @@ export interface Config {
 
 const permissionFields = {
   canUse: Schema.boolean().default(false).description('允许调用本插件的任何指令'),
-  canSaveLocal: Schema.boolean().default(false).description('允许将导出结果长期保存到 Koishi 所在设备'),
+  canSaveLocal: Schema.boolean().default(false).description('允许将导出结果长期保存到 Koishi 所在设备；还必须设置保存目录'),
   canUploadGroupFile: Schema.boolean().default(false).description('允许把导出文件上传到当前群文件'),
   canResendText: Schema.boolean().default(false).description('允许把记录以纯文字合并转发重新发送到当前会话'),
-  canSaveImages: Schema.boolean().default(false).description('允许下载原消息图片、头像或生成 PNG 长图'),
+  canSaveImages: Schema.boolean().default(false).description('允许下载原消息图片、头像或生成 PNG 长图；模板中的图片路径也受此开关控制'),
 }
 
 const denyAll = {
@@ -65,35 +69,47 @@ export const Config: Schema<Config> = Schema.intersect([
     defaultFormat: Schema.union([
       Schema.const('txt').description('TXT 纯文本'),
       Schema.const('json').description('JSON 结构化数据'),
-      Schema.const('html').description('HTML 网页'),
+      Schema.const('markdown').description('Markdown 文档（.md）'),
       Schema.const('image').description('由 HTML 渲染的 PNG 长图'),
-    ]).default('txt').description('未指定格式时使用的格式'),
+    ]).default('txt').description('未指定格式时使用的格式；默认是 TXT 纯文本'),
     defaultTarget: Schema.union([
-      Schema.const('local').description('保存到本地'),
+      Schema.const('local').description('保存到本地（需要设置保存目录）'),
       Schema.const('group').description('上传到当前群文件'),
       Schema.const('chat').description('以纯文字合并转发重新发送'),
-    ]).default('local').description('未指定目标时使用的处理方式'),
-    outputPath: Schema.string().default('data/message-capsule')
-      .description('本地导出目录；相对路径以 Koishi 工作目录为基准'),
+    ]).default('chat').description('未指定目标时的发送方式；默认是纯文字合并为一条消息转发'),
+    chatSendMode: Schema.union([
+      Schema.const('single').description('合并为单条消息发布，超出字数上限时再分条'),
+      Schema.const('batch').description('按每组固定消息数分条后，分别以合并消息发布'),
+    ]).default('single').description('纯文字合并转发的发送方式；只在目标为 chat 时生效'),
+    resendMaxLength: Schema.natural().min(200).max(20000).default(4000)
+      .description('单条纯文字合并转发的字数上限；单条模式超过此值后自动分条'),
+    messageTemplate: Schema.string().role('textarea', { rows: [4, 10] }).default(
+      '${用户昵称} ${日期时间}\n${消息内容}',
+    ).description('每条消息的定型文。可用：${用户昵称}、${用户名}、${群昵称}、${用户ID}、${原始用户ID}、${消息ID}、${日期时间}、${消息内容}、${图片}、${头像}、${序号}、${平台}。开关关闭后，对应变量会留空。'),
+    fileNameTemplate: Schema.string().default(
+      '消息胶囊-${首条消息}-${首条时间}-${消息条数}条',
+    ).description('导出文件名定型文。可用：${插件名}、${首条消息}、${首条时间}、${消息条数}、${导出格式}、${平台}。文件名中的非法字符会自动替换。'),
+    outputPath: Schema.string().default('')
+      .description('长期保存目录；留空则关闭本地保存功能，不会自动创建目录。填写相对路径时以 Koishi 工作目录为基准。'),
   }).description('2️⃣ 基本设置'),
 
   Schema.object({
     saveImages: Schema.boolean().default(false).description('默认下载并保存记录中的图片（单次可用 --images 开启）'),
     includeMessageTime: Schema.boolean().default(true).description('保存每条消息的日期与时间'),
-    includeUserId: Schema.boolean().default(false).description('保存发送者用户 ID（兼容各平台编号）'),
+    includeUserId: Schema.boolean().default(false).description('保存发送者用户 ID（兼容各平台编号，通常用于展示；不是用户名）'),
     includeGroupNickname: Schema.boolean().default(true).description('优先保存并显示群昵称 / 群名片'),
-    includeOriginalId: Schema.boolean().default(false).description('保存消息和发送者的原始 ID'),
+    includeOriginalId: Schema.boolean().default(false).description('保存平台返回的消息和发送者原始 ID（这是编号，不是用户名）'),
     includeAvatar: Schema.boolean().default(false).description('下载并保存发送者头像'),
   }).description('3️⃣ 默认导出内容（均可由单次指令选项覆盖）'),
 
   Schema.object({
-    maxMessages: Schema.natural().min(1).max(10000).default(2000).description('单次最多处理的消息数'),
+    maxMessages: Schema.natural().min(1).max(200).default(200).description('单次最多处理的消息数，默认和上限都是 200'),
     maxForwardDepth: Schema.natural().min(0).max(10).default(3).description('嵌套合并转发的最大展开深度'),
     maxImages: Schema.natural().min(0).max(1000).default(100).description('单次最多保存的图片与头像总数'),
     maxImageSizeMB: Schema.number().min(0.1).max(100).step(0.1).default(10).description('单张图片最大体积（MB）'),
     maxTotalImageSizeMB: Schema.number().min(0.1).max(1000).step(0.1).default(100).description('单次图片总大小上限（MB）'),
     imageTimeoutSeconds: Schema.number().min(1).max(120).default(15).description('单张图片下载超时（秒）'),
-    resendBatchSize: Schema.natural().min(1).max(100).default(100).description('文字重发时每组合并转发包含的最大消息数'),
+    resendBatchSize: Schema.natural().min(1).max(200).default(100).description('分条发送模式下，每组合并转发包含的最大消息数'),
     screenshotWidth: Schema.natural().min(480).max(1920).default(900).description('PNG 长图的页面宽度'),
     screenshotScale: Schema.number().min(0.5).max(3).step(0.25).default(1).description('PNG 长图像素倍率'),
   }).description('4️⃣ 资源与性能限制'),

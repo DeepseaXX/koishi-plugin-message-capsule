@@ -9,7 +9,6 @@ export function renderJson(document: ExportDocument, settings: ExportSettings) {
       version: 1,
       exportedAt: view.exportedAt,
       messageCount: view.messageCount,
-      reference: 'https://github.com/shuakami/qq-chat-exporter',
     },
     source: view.source,
     exportOptions: settings,
@@ -19,12 +18,15 @@ export function renderJson(document: ExportDocument, settings: ExportSettings) {
       originalId: message.originalId,
       sender: {
         name: message.sender.displayName,
+        username: message.sender.username,
+        groupNickname: message.sender.groupNickname,
         userId: message.sender.userId,
         originalId: message.sender.originalId,
         avatar: message.sender.avatar,
       },
       content: {
         text: message.text,
+        formatted: message.formatted,
         elements: message.parts.map(part => ({
           type: part.type,
           text: part.text,

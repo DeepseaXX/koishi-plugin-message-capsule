@@ -1,6 +1,8 @@
-export type ExportFormat = 'txt' | 'json' | 'html' | 'image'
+export type ExportFormat = 'txt' | 'json' | 'markdown' | 'image'
 
 export type ExportTarget = 'local' | 'group' | 'chat'
+
+export type ChatSendMode = 'single' | 'batch'
 
 export interface PermissionFlags {
   canUse: boolean
@@ -68,6 +70,7 @@ export interface ExportDocument {
 }
 
 export interface ExportSettings {
+  messageTemplate: string
   includeMessageTime: boolean
   includeUserId: boolean
   includeGroupNickname: boolean

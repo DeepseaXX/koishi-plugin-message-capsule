@@ -23,6 +23,7 @@ test('resource saver writes explicitly enabled data images', async () => {
       }],
     }
     const settings: ExportSettings = {
+      messageTemplate: '${用户昵称} ${日期时间}\\n${消息内容}',
       saveImages: true,
       includeAvatar: false,
       includeMessageTime: true,
