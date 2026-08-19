@@ -43,26 +43,26 @@
 先回复一条合并记录，再输入：
 
 ```text
-消息胶囊 txt
+msgcap txt
 ```
 
 常用子指令：
 
 ```text
-消息胶囊 txt
-消息胶囊 json
-消息胶囊 html
-消息胶囊 图片
-消息胶囊 群文件 html
-消息胶囊 重发
+msgcap txt
+msgcap json
+msgcap html
+msgcap 图片
+msgcap 群文件 html
+msgcap 重发
 ```
 
 总指令也支持目标选项：
 
 ```text
-消息胶囊 html --target local
-消息胶囊 json --target group
-消息胶囊 txt --target chat
+msgcap html --target local
+msgcap json --target group
+msgcap txt --target chat
 ```
 
 其中 `local` 表示本地保存，`group` 表示群文件，`chat` 表示纯文字重发。
@@ -98,8 +98,8 @@
 示例：
 
 ```text
-消息胶囊 html --images --time --no-user-id --nickname --no-id --no-avatar
-消息胶囊 图片 --no-images --avatar
+msgcap html --images --time --no-user-id --nickname --no-id --no-avatar
+msgcap 图片 --no-images --avatar
 ```
 
 即使通过选项开启了图片或头像，调用者仍必须拥有“允许保存图片”权限。“重发”模式固定为纯文字，不下载图片和头像；图片、语音、视频、文件等内容会变成文字占位符。

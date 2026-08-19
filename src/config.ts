@@ -61,7 +61,7 @@ export const Config: Schema<Config> = Schema.intersect([
   }).description('1️⃣ 首次使用与权限管理（默认全部拒绝，请先配置）'),
 
   Schema.object({
-    commandName: Schema.string().pattern(/^\S+$/).default('消息胶囊').description('总指令名称'),
+    commandName: Schema.string().pattern(/^\S+$/).default('msgcap').description('总指令名称（默认：msgcap）'),
     defaultFormat: Schema.union([
       Schema.const('txt').description('TXT 纯文本'),
       Schema.const('json').description('JSON 结构化数据'),

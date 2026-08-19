@@ -18,8 +18,8 @@ export const usage = `
 ## 使用方法
 
 1. 回复一条“合并聊天记录”或其他可处理消息。
-2. 输入 \`消息胶囊 txt\`、\`消息胶囊 json\`、\`消息胶囊 html\` 或 \`消息胶囊 图片\`。
-3. 也可以使用 \`消息胶囊 群文件 html\` 上传群文件，或使用 \`消息胶囊 重发\` 发送纯文字合并转发。
+2. 输入 \`msgcap txt\`、\`msgcap json\`、\`msgcap html\` 或 \`msgcap 图片\`。
+3. 也可以使用 \`msgcap 群文件 html\` 上传群文件，或使用 \`msgcap 重发\` 发送纯文字合并转发。
 
 常用单次选项：\`--images / --no-images\`、\`--time / --no-time\`、\`--user-id / --no-user-id\`、\`--nickname / --no-nickname\`、\`--id / --no-id\`、\`--avatar / --no-avatar\`。
 
